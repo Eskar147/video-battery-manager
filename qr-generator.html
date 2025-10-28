@@ -196,7 +196,7 @@
             
             for (let i = 1; i <= numBatteries; i++) {
                 const batteryId = `BATT${String(i).padStart(3, '0')}`;
-                const url = `https://"+baseUrl+"/?id=${batteryId}`;
+                const url = `https://${baseUrl}/?id=${batteryId}`;
                 
                 const card = document.createElement('div');
                 card.className = 'qr-card';
