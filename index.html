@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Batterie Video</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+        }
+        
+        .battery-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .battery-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .battery-level {
+            font-size: 3em;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .level-high { color: #10b981; }
+        .level-medium { color: #f59e0b; }
+        .level-low { color: #ef4444; }
+        
+        .battery-bar {
+            width: 100%;
+            height: 40px;
+            background: #e5e7eb;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .battery-fill {
+            height: 100%;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .fill-high { background: linear-gradient(90deg, #10b981, #059669); }
+        .fill-medium { background: linear-gradient(90deg, #f59e0b, #d97706); }
+        .fill-low { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+        }
+        
+        .error {
+            background: #fee2e2;
+            border: 2px solid #ef4444;
+            color: #991b1b;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .battery-icon {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .last-update {
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔋 Gestione Batterie Video</h1>
+            <p>Scansiona il QR code per vedere lo stato</p>
+        </div>
+        
+        <div id="content">
+            <div class="loading">⏳ Caricamento dati...</div>
+        </div>
+        
+        <div class="footer">
+            <p>Video Battery Manager v1.0</p>
+        </div>
+    </div>
+    
+    <script>
+        // Configurazione - INSERISCI QUI IL TUO GOOGLE SHEETS URL
+        const SHEET_URL = 'YOUR_GOOGLE_SHEETS_URL_HERE';
+        
+        // Ottieni l'ID della batteria dall'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const batteryId = urlParams.get('id');
+        
+        function getBatteryLevel(percentage) {
+            if (percentage >= 70) return 'high';
+            if (percentage >= 30) return 'medium';
+            return 'low';
+        }
+        
+        function getStatusText(percentage) {
+            if (percentage >= 80) return '✅ Completamente carica';
+            if (percentage >= 50) return '🔋 Buon livello di carica';
+            if (percentage >= 20) return '⚠️ Da ricaricare presto';
+            return '🔴 Ricarica urgente!';
+        }
+        
+        function displayBattery(battery) {
+            const level = getBatteryLevel(battery.percentage);
+            
+            const html = `
+                <div class="battery-card">
+                    <div class="battery-icon">🔋</div>
+                    <div class="battery-name">${battery.name}</div>
+                    <div class="battery-level level-${level}">${battery.percentage}%</div>
+                    <div class="battery-bar">
+                        <div class="battery-fill fill-${level}" style="width: ${battery.percentage}%">
+                            ${battery.percentage}%
+                        </div>
+                    </div>
+                    <div class="status">${getStatusText(battery.percentage)}</div>
+                    <div class="last-update">Ultimo aggiornamento: ${new Date().toLocaleString('it-IT')}</div>
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+        }
+        
+        function showError(message) {
+            document.getElementById('content').innerHTML = `
+                <div class="error">
+                    <h2>⚠️ Errore</h2>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+        
+        async function loadBatteryData() {
+            if (!batteryId) {
+                showError('Nessun ID batteria specificato. Scansiona un QR code valido.');
+                return;
+            }
+            
+            if (SHEET_URL === 'YOUR_GOOGLE_SHEETS_URL_HERE') {
+                showError('Configurazione non completata. Consulta il file README.md per le istruzioni.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(SHEET_URL);
+                const data = await response.json();
+                
+                // Cerca la batteria con l'ID corrispondente
+                const battery = data.find(b => b.id === batteryId);
+                
+                if (battery) {
+                    displayBattery(battery);
+                } else {
+                    showError(`Batteria con ID "${batteryId}" non trovata.`);
+                }
+            } catch (error) {
+                showError('Errore nel caricamento dei dati. Verifica la configurazione.');
+                console.error(error);
+            }
+        }
+        
+        // Carica i dati all'avvio
+        loadBatteryData();
+        
+        // Aggiorna ogni 30 secondi
+        setInterval(loadBatteryData, 30000);
+    </script>
+</body>
+</html>
